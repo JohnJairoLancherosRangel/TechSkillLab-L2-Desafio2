@@ -2,6 +2,7 @@ package co.com.techskill.lab2.library.web;
 
 import co.com.techskill.lab2.library.domain.dto.PetitionDTO;
 import co.com.techskill.lab2.library.service.IPetitionService;
+import co.com.techskill.lab2.library.service.dummy.PetitionService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
@@ -11,7 +12,7 @@ import reactor.core.publisher.Mono;
 @RequestMapping("/petitions")
 public class PetitionResource {
     private final IPetitionService petitionService;
-
+    private PetitionService petitionServiceDummy;
     public PetitionResource(IPetitionService petitionService){
         this.petitionService = petitionService;
     }

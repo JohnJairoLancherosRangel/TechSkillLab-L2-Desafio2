@@ -1,13 +1,18 @@
 package co.com.techskill.lab2.library.service.dummy;
 
 import co.com.techskill.lab2.library.domain.dto.PetitionDTO;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.reactor.circuitbreaker.operator.CircuitBreakerOperator;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 public class PetitionService {
@@ -49,4 +54,47 @@ public class PetitionService {
     }
 
     //TO - DO: Challenge #1
+
+    public Flux<PetitionDTO> changeDatePetitions(){
+
+        return Flux.fromIterable(petitions)
+                .map(p -> {
+                    int diasAleatorios = ThreadLocalRandom.current().nextInt(1, 6); // 1 a 5
+                    p.setSentAt(LocalDate.now().minusDays(diasAleatorios));;
+                    p.setType("RETURN");
+                    return p;
+                });
+    }
+
+    public Flux<PetitionDTO> errorSimulator(){
+        CircuitBreaker circuitBreaker = CircuitBreaker.ofDefaults("petitionService");
+
+        return changeDatePetitions()
+                .flatMap(petition -> Mono.just(petition)
+                        .transformDeferred(CircuitBreakerOperator.of(circuitBreaker))
+                        .flatMap(p -> {
+
+                            System.out.println("RETURN".equalsIgnoreCase(p.getType()));
+                            System.out.println(LocalDate.now());
+                            System.out.println(p.getSentAt());
+                            System.out.println(p.getSentAt().isBefore(LocalDate.now().minusDays(3)));
+
+                            if ("RETURN".equalsIgnoreCase(p.getType()) &&
+                                    p.getSentAt().isBefore(LocalDate.now().minusDays(3))) {
+                                System.out.println("RETURN con más de 3 días de envío: " + p.getSentAt());
+                                return Mono.error(new RuntimeException("RETURN con más de 3 días de envío: " + p.getSentAt()));
+                            }
+                            return Mono.just(p);
+                        })
+                        .retry(2) 
+                        .timeout(Duration.ofSeconds(2))
+                        .onErrorResume(error -> {
+                            System.out.println("Error controlado en petición " + petition.getPetitionId() + ": " + error.getMessage());
+                            return Mono.empty();
+                        })
+                );
+
+    }
+
+
 }

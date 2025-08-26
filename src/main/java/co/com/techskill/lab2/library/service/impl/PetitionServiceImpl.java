@@ -7,6 +7,7 @@ import co.com.techskill.lab2.library.repository.IBookRepository;
 import co.com.techskill.lab2.library.repository.IPetitionRepository;
 import co.com.techskill.lab2.library.service.IPetitionService;
 
+import co.com.techskill.lab2.library.service.dummy.PetitionService;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.reactor.circuitbreaker.operator.CircuitBreakerOperator;
@@ -28,6 +29,7 @@ public class PetitionServiceImpl implements IPetitionService {
     private final IBookRepository bookRepository;
     private final PetitionMapper petitionMapper;
     CircuitBreaker circuitBreaker = CircuitBreaker.ofDefaults("petitionService");
+    private PetitionService petitionService;
 
     public PetitionServiceImpl(IPetitionRepository petitionRepository, IBookRepository bookRepository) {
         this.petitionRepository = petitionRepository;
@@ -82,11 +84,9 @@ public class PetitionServiceImpl implements IPetitionService {
                 .switchIfEmpty(Mono.error(new RuntimeException("Petition of type LEND not found")))
                 .flatMap(petition -> bookRepository.findByBookId(petition.getBookId())
                         .map(book -> "Petition approved for book: " + book.getBookId())
-
                 ).onErrorResume(e -> Mono.just("Petition failed for book: " + petitionDTO.getBookId() + e.getMessage()));
 
     }
-
 
     @Override
     public Mono<String> simulateIntermittency(PetitionDTO petitionDTO) {
@@ -106,5 +106,7 @@ public class PetitionServiceImpl implements IPetitionService {
                 .onErrorResume(e -> Mono.just("Petition failed: "+petitionDTO.getPetitionId() + " - " + e.getMessage()));
 
     }
+
+
 
 }
